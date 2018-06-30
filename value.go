@@ -56,6 +56,8 @@ func convertValue(athenaType string, rawValue *string) (interface{}, error) {
 		return val, nil
 	case "timestamp":
 		return time.Parse(TimestampLayout, val)
+	case "decimal":
+		return val, nil
 	default:
 		panic(fmt.Errorf("unknown type `%s` with value %s", athenaType, val))
 	}

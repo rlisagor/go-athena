@@ -48,6 +48,7 @@ func TestQuery(t *testing.T) {
 			DoubleType:    1.32112345,
 			StringType:    "some string",
 			TimestampType: athenaTimestamp(time.Date(2006, 1, 2, 3, 4, 11, 0, time.UTC)),
+			DecimalType:   "123.00012300",
 		},
 		{
 			SmallintType:  9,
@@ -58,6 +59,7 @@ func TestQuery(t *testing.T) {
 			DoubleType:    1.235,
 			StringType:    "another string",
 			TimestampType: athenaTimestamp(time.Date(2017, 12, 3, 1, 11, 12, 0, time.UTC)),
+			DecimalType:   "9999.99999999",
 		},
 		{
 			SmallintType:  9,
@@ -68,9 +70,10 @@ func TestQuery(t *testing.T) {
 			FloatType:     3.14159,
 			StringType:    "another string",
 			TimestampType: athenaTimestamp(time.Date(2017, 12, 3, 20, 11, 12, 0, time.UTC)),
+			DecimalType:   "0.00000000",
 		},
 	}
-	expectedTypeNames := []string{"varchar", "smallint", "integer", "bigint", "boolean", "float", "double", "varchar", "timestamp"}
+	expectedTypeNames := []string{"varchar", "smallint", "integer", "bigint", "boolean", "float", "double", "varchar", "timestamp", "decimal"}
 	harness.uploadData(expected)
 
 	rows := harness.mustQuery("select * from %s", harness.table)
@@ -90,6 +93,7 @@ func TestQuery(t *testing.T) {
 			&row.DoubleType,
 			&row.StringType,
 			&row.TimestampType,
+			&row.DecimalType,
 		))
 
 		assert.Equal(t, expected[index], row, fmt.Sprintf("index: %d", index))
@@ -103,7 +107,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	require.NoError(t, rows.Err(), "rows.Err()")
-	require.Equal(t, 2, index+1, "row count")
+	require.Equal(t, 3, index+1, "row count")
 }
 
 func TestOpen(t *testing.T) {
@@ -128,6 +132,7 @@ type dummyRow struct {
 	DoubleType    float64         `json:"doubleType"`
 	StringType    string          `json:"stringType"`
 	TimestampType athenaTimestamp `json:"timestampType"`
+	DecimalType   string          `json:"decimalType"`
 }
 
 type athenaHarness struct {
@@ -152,7 +157,7 @@ func setup(t *testing.T) *athenaHarness {
 
 func (a *athenaHarness) setupTable() {
 	// tables cannot start with numbers or contain dashes
-	id, _ := uuid.NewV4()
+	id := uuid.NewV4()
 	a.table = "t_" + strings.Replace(id.String(), "-", "_", -1)
 	a.mustExec(`CREATE EXTERNAL TABLE %[1]s (
 	nullValue string,
@@ -163,7 +168,8 @@ func (a *athenaHarness) setupTable() {
 	floatType float,
 	doubleType double,
 	stringType string,
-	timestampType timestamp
+	timestampType timestamp,
+	decimalType decimal(15,8)
 )
 ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
 WITH SERDEPROPERTIES (
